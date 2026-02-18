@@ -1,3 +1,7 @@
+import { createReadStream } from "node:fs";
+import { writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import AdmZip from "adm-zip";
 import { beforeEach, describe, expect, it } from "vitest";
 import XmlZipParser from "./XmlZipParser.js";
@@ -10,6 +14,16 @@ const createZipBuffer = (files: Array<{ name: string; content: string }>) => {
   }
 
   return zip.toBuffer();
+};
+
+const createZipFile = async (
+  files: Array<{ name: string; content: string }>,
+) => {
+  const buffer = createZipBuffer(files);
+  const path = join(tmpdir(), `xml-zip-parser-test-${Date.now()}.zip`);
+  await writeFile(path, buffer);
+
+  return path;
 };
 
 describe("XmlZipParser", () => {
@@ -120,6 +134,175 @@ describe("XmlZipParser", () => {
 
       expect(Array.isArray(result[0]!.parsedData.ROOT.ROW)).toBe(true);
       expect(result[0]!.parsedData.ROOT.ROW).toHaveLength(2);
+    });
+  });
+
+  describe("createReadStreamsGetterFromZip", () => {
+    it("should yield only XML entries as streams", async () => {
+      const zipPath = await createZipFile([
+        { name: "data.xml", content: '<root><row id="1"/></root>' },
+        { name: "readme.txt", content: "ignore me" },
+        { name: "other.xml", content: '<root><row id="2"/></root>' },
+      ]);
+
+      const readStream = createReadStream(zipPath);
+      const names: string[] = [];
+
+      for await (const entry of XmlZipParser.createReadStreamsGetterFromZip(
+        readStream,
+      )) {
+        names.push(entry.name);
+        entry.stream.autodrain();
+      }
+
+      expect(names).toEqual(["data.xml", "other.xml"]);
+    });
+
+    it("should yield nothing for zip with no XML files", async () => {
+      const zipPath = await createZipFile([
+        { name: "data.json", content: '{"a":1}' },
+        { name: "notes.txt", content: "hello" },
+      ]);
+
+      const readStream = createReadStream(zipPath);
+      const names: string[] = [];
+
+      for await (const entry of XmlZipParser.createReadStreamsGetterFromZip(
+        readStream,
+      )) {
+        names.push(entry.name);
+        entry.stream.autodrain();
+      }
+
+      expect(names).toHaveLength(0);
+    });
+
+    it("should return basename for XML files in subdirectories", async () => {
+      const zipPath = await createZipFile([
+        { name: "sub/dir/nested.xml", content: "<root/>" },
+      ]);
+
+      const readStream = createReadStream(zipPath);
+      const names: string[] = [];
+
+      for await (const entry of XmlZipParser.createReadStreamsGetterFromZip(
+        readStream,
+      )) {
+        names.push(entry.name);
+        entry.stream.autodrain();
+      }
+
+      expect(names).toEqual(["nested.xml"]);
+    });
+  });
+
+  describe("createParseReadStreamsGetterFromZip", () => {
+    it("should yield parsed XML streams from zip", async () => {
+      const zipPath = await createZipFile([
+        {
+          name: "data.xml",
+          content:
+            '<data><item id="1" name="a"/><item id="2" name="b"/></data>',
+        },
+      ]);
+
+      const readStream = createReadStream(zipPath);
+      const results: Array<{
+        name: string;
+        rows: Record<string, string>[];
+      }> = [];
+
+      for await (const entry of parser.createParseReadStreamsGetterFromZip(
+        readStream,
+        "item",
+      )) {
+        const rows: Record<string, string>[] = [];
+
+        await new Promise<void>((resolve) => {
+          entry.stream.on("data", (data: Record<string, string>[] | null) => {
+            if (data) {
+              rows.push(...data);
+            }
+
+            return Promise.resolve();
+          });
+
+          setTimeout(resolve, 100);
+        });
+
+        results.push({ name: entry.name, rows });
+      }
+
+      expect(results).toHaveLength(1);
+      expect(results[0]!.name).toBe("data.xml");
+      expect(results[0]!.rows).toHaveLength(2);
+      expect(results[0]!.rows[0]!.$id).toBe("1");
+      expect(results[0]!.rows[1]!.$name).toBe("b");
+    });
+
+    it("should skip non-XML files and parse only XML", async () => {
+      const zipPath = await createZipFile([
+        { name: "skip.txt", content: "not xml" },
+        {
+          name: "keep.xml",
+          content: '<data><item id="yes"/></data>',
+        },
+      ]);
+
+      const readStream = createReadStream(zipPath);
+      const names: string[] = [];
+
+      for await (const entry of parser.createParseReadStreamsGetterFromZip(
+        readStream,
+        "item",
+      )) {
+        names.push(entry.name);
+
+        await new Promise<void>((resolve) => {
+          entry.stream.on("data", () => Promise.resolve());
+          setTimeout(resolve, 100);
+        });
+      }
+
+      expect(names).toEqual(["keep.xml"]);
+    });
+
+    it("should handle multiple XML files in zip", async () => {
+      const zipPath = await createZipFile([
+        { name: "a.xml", content: '<data><row val="A"/></data>' },
+        { name: "b.xml", content: '<data><row val="B"/></data>' },
+      ]);
+
+      const readStream = createReadStream(zipPath);
+      const results: Array<{
+        name: string;
+        rows: Record<string, string>[];
+      }> = [];
+
+      for await (const entry of parser.createParseReadStreamsGetterFromZip(
+        readStream,
+        "row",
+      )) {
+        const rows: Record<string, string>[] = [];
+
+        await new Promise<void>((resolve) => {
+          entry.stream.on("data", (data: Record<string, string>[] | null) => {
+            if (data) {
+              rows.push(...data);
+            }
+
+            return Promise.resolve();
+          });
+
+          setTimeout(resolve, 100);
+        });
+
+        results.push({ name: entry.name, rows });
+      }
+
+      expect(results).toHaveLength(2);
+      expect(results[0]!.rows[0]!.$val).toBe("A");
+      expect(results[1]!.rows[0]!.$val).toBe("B");
     });
   });
 });
