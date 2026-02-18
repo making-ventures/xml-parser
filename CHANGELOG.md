@@ -1,5 +1,11 @@
 # Changelog
 
+## [](https://github.com/damir-manapov/xml-parser/compare/v0.1.0...vnull) (2026-02-18)
+
+### Features
+
+* add CommonJS build for dual ESM/CJS support ([34948b4](https://github.com/damir-manapov/xml-parser/commit/34948b4a974cc1c78fd3380b16b53dd548b179a3))
+
 ## 0.1.0 (2026-02-18)
 
 ### Features

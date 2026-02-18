@@ -1,6 +1,6 @@
 {
   "name": "@mkven/xml-parser",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Opinionated XML parsing utilities with ZIP archive support",
   "author": "Damir Manapov",
   "license": "MIT",
