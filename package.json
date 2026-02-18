@@ -16,6 +16,9 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "adm-zip": "^0.5.16",
     "fast-xml-parser": "^5.2.3",
