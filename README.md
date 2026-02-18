@@ -94,3 +94,20 @@ parser.parse(xml);
 - [fast-xml-parser](https://www.npmjs.com/package/fast-xml-parser) — XML parsing engine
 - [adm-zip](https://www.npmjs.com/package/adm-zip) — synchronous ZIP extraction
 - [unzipper](https://www.npmjs.com/package/unzipper) — streaming ZIP extraction
+
+## Development
+
+```bash
+sh check.sh       # lint (biome) + typecheck (tsc) + tests (vitest)
+sh health.sh      # gitleaks + outdated deps + audit
+sh all-checks.sh  # both
+```
+
+### Releasing
+
+Uses [release-it](https://github.com/release-it/release-it) with conventional changelog:
+
+```bash
+pnpm run release:dry  # preview
+pnpm run release      # bump version, update CHANGELOG.md, tag, publish to npm
+```
