@@ -1,5 +1,11 @@
 # Changelog
 
+## [](https://github.com/damir-manapov/xml-parser/compare/v0.2.4...vnull) (2026-02-25)
+
+### Bug Fixes
+
+* format package.json build script ([d48ee76](https://github.com/damir-manapov/xml-parser/commit/d48ee76a7d64a21928eff5eeb5ca1ff86c0e0cee))
+
 ## [0.2.4](https://github.com/damir-manapov/xml-parser/compare/v0.2.2...v0.2.4) (2026-02-20)
 
 ### Documentation
