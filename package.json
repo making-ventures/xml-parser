@@ -36,7 +36,7 @@
     "vitest": "^4.0.18"
   },
   "scripts": {
-     "build": "tsc && tsc -p tsconfig.cjs.json && node -e \"require('fs').writeFileSync('dist/cjs/package.json', JSON.stringify({type:'commonjs'}))\"",
+    "build": "tsc && tsc -p tsconfig.cjs.json && node -e \"require('fs').writeFileSync('dist/cjs/package.json', JSON.stringify({type:'commonjs'}))\"",
     "lint": "biome check --write .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
